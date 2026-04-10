@@ -1,5 +1,5 @@
 {
-  "originHash" : "c2d2baa58bb4a39886eebd2333e2c7c2b0698d16ada573b4b3d64a6809122a5f",
+  "originHash" : "f3c06877adca3126a6deed915b05d713eb4cbf23e7f39aa7135d1d0c50f2cd4c",
   "pins" : [
     {
       "identity" : "foundationextensions",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "3e4fc6e5dd6464864026db227c9282c46e8be541",
         "version" : "5.1.2"
+      }
+    },
+    {
+      "identity" : "swift-log",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-log",
+      "state" : {
+        "revision" : "8c0f217f01000dd30f60d6e536569ad4e74291f9",
+        "version" : "1.11.0"
       }
     }
   ],

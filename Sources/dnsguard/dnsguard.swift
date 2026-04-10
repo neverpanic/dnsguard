@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 import NetworkInterfaceChangeMonitoring
 import NetworkInterfaceInfo
 import SystemConfiguration
@@ -22,6 +23,8 @@ enum DNSGuardError: Error {
 }
 
 let APP_ID = "de.neverpanic.dnsguard";
+
+let logger = Logger(label: APP_ID)
 
 private func resetDNS(sc_path: String, domains: [String]) async throws {
     let store = SCDynamicStoreCreate(nil, APP_ID as CFString, nil, nil);
@@ -53,7 +56,7 @@ private func main() async throws -> Int32 {
         let config_data = try Data(contentsOf: config_file, options: .mappedIfSafe)
         maybe_config = try! JSONDecoder().decode(DNSGuardConfig.self, from: config_data)
     } catch {
-        print("Failed to read config file: \(error)")
+        logger.error("Failed to read config file", metadata: ["error": "\(error)"])
         return EXIT_FAILURE
     }
 
@@ -71,12 +74,12 @@ private func main() async throws -> Int32 {
                         case .removed:
                             "was shut down"
                     }
-                    print("\(change.interface.name) \(mod), resetting DNS")
+                    logger.info("\(change.interface.name) \(mod), resetting DNS")
                     do {
                         try await resetDNS(sc_path: config.sc_path, domains: config.domains)
-                        print("DNS supplementalMatchDomains successfully set to \(config.domains)")
+                        logger.info("DNS supplementalMatchDomains successfully set to \(config.domains)")
                     } catch {
-                        print("Failed to reset DNS: \(error)")
+                        logger.warning("Failed to reset DNS", metadata: ["error": "\(error)"])
                     }
                 }
             default:
