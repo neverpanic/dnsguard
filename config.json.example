@@ -1,0 +1,8 @@
+{
+	"interfaces": ["utun100"],
+	"sc-path": "State:/Network/Service/NetBird-Search-0/DNS",
+	"domains": [
+		"my-company.com",
+		"my-company.corp"
+	]
+}
