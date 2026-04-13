@@ -32,12 +32,12 @@ let APP_ID = "de.neverpanic.dnsguard";
 let logger = Logger(label: APP_ID)
 
 private func resetDNS(sc_path: String, domains: [String]) async throws {
-    let store = SCDynamicStoreCreate(nil, APP_ID as CFString, nil, nil);
+    let store = SCDynamicStoreCreate(nil, APP_ID as CFString, nil, nil)
     guard let store = store else {
         throw DNSGuardError.storeCreationFailed
     }
 
-    let d = SCDynamicStoreCopyValue(store, sc_path as CFString);
+    let d = SCDynamicStoreCopyValue(store, sc_path as CFString)
     guard let d = d else {
         throw DNSGuardError.noSuchKey(sc_path)
     }
@@ -54,7 +54,7 @@ private func resetDNS(sc_path: String, domains: [String]) async throws {
 
 
 private func main() async throws -> Int32 {
-    var maybe_config: DNSGuardConfig? = nil;
+    var maybe_config: DNSGuardConfig? = nil
     do {
         let config_dir = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         let config_file = config_dir.appendingPathComponent(APP_ID).appendingPathComponent("config.json")
