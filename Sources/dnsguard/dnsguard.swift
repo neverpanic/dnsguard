@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Clemens Lang
+ * SDPX-License-Identifier: BSD-2-Clause
+ */
+
 import Foundation
 import Logging
 import NetworkInterfaceChangeMonitoring
