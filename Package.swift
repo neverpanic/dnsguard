@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "dnsguard",
     platforms: [
-        .macOS(.v12),
+        .macOS(.v13),
     ],
     dependencies: [
         .package(url: "https://github.com/wadetregaskis/NetworkInterfaceInfo.git", from: "5.1.2"),

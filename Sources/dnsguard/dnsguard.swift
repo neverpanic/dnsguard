@@ -80,12 +80,22 @@ private func main() async throws -> Int32 {
                             "was shut down"
                     }
                     logger.info("\(change.interface.name) \(mod), resetting DNS")
-                    do {
-                        try await resetDNS(sc_path: config.sc_path, domains: config.domains)
-                        logger.info("DNS supplementalMatchDomains successfully set to \(config.domains)")
-                    } catch {
-                        logger.warning("Failed to reset DNS", metadata: ["error": "\(error)"])
-                    }
+
+                    var retries = 5
+                    repeat {
+                        do {
+                            try await resetDNS(sc_path: config.sc_path, domains: config.domains)
+                            logger.info("DNS supplementalMatchDomains successfully set to \(config.domains)")
+                            break
+                        } catch {
+                            logger.warning("Failed to reset DNS", metadata: ["error": "\(error)"])
+                            retries -= 1
+                            if retries > 0 {
+                                logger.warning("Waiting a second before retrying \(retries) more times")
+                                try await Task.sleep(for: .seconds(1))
+                            }
+                        }
+                    } while retries > 0
                 }
             default:
                 break
