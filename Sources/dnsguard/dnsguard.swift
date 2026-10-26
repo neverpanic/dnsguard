@@ -81,7 +81,7 @@ private func main() async throws -> Int32 {
                     }
                     logger.info("\(change.interface.name) \(mod), resetting DNS")
 
-                    var retries = 5
+                    var retries = 10
                     repeat {
                         do {
                             try await resetDNS(sc_path: config.sc_path, domains: config.domains)
@@ -91,8 +91,8 @@ private func main() async throws -> Int32 {
                             logger.warning("Failed to reset DNS", metadata: ["error": "\(error)"])
                             retries -= 1
                             if retries > 0 {
-                                logger.warning("Waiting a second before retrying \(retries) more times")
-                                try await Task.sleep(for: .seconds(1))
+                                logger.warning("Waiting two seconds before retrying \(retries) more times")
+                                try await Task.sleep(for: .seconds(2))
                             }
                         }
                     } while retries > 0
