@@ -5,8 +5,6 @@
 
 import Foundation
 import Logging
-import NetworkInterfaceChangeMonitoring
-import NetworkInterfaceInfo
 import SystemConfiguration
 
 struct DNSGuardConfig: Decodable {
@@ -22,39 +20,62 @@ struct DNSGuardConfig: Decodable {
 
 enum DNSGuardError: Error {
     case storeCreationFailed
-    case noSuchKey(String)
-    case typeMismatch
-    case updateFailed
+    case storeNotificationsFailed
 }
 
 let APP_ID = "de.neverpanic.dnsguard";
 
 let logger = Logger(label: APP_ID)
 
-private func resetDNS(sc_path: String, domains: [String]) async throws {
-    let store = SCDynamicStoreCreate(nil, APP_ID as CFString, nil, nil)
-    guard let store = store else {
-        throw DNSGuardError.storeCreationFailed
+var maybe_config: DNSGuardConfig? = nil;
+
+let handleChange: SCDynamicStoreCallBack = {
+    (store, changedKeys, _) -> Void in
+    logger.info("SCDynamicStore keys changed: \(changedKeys)")
+    let config = maybe_config!
+
+    guard let keys = changedKeys as? [String] else {
+        logger.warning("Changed keys are not an array of Strings")
+        return
     }
 
-    let d = SCDynamicStoreCopyValue(store, sc_path as CFString)
-    guard let d = d else {
-        throw DNSGuardError.noSuchKey(sc_path)
-    }
-    guard let dict = d.mutableCopy() as? NSMutableDictionary else {
-        throw DNSGuardError.typeMismatch
-    }
+    for key in keys {
+        if key != config.sc_path {
+            logger.info("Ignoring change in unwatched key \(key)")
+            continue
+        }
 
-    dict[kSCPropNetDNSSupplementalMatchDomains] = domains as NSArray
+        let d = SCDynamicStoreCopyValue(store, config.sc_path as CFString)
+        guard let d = d else {
+            logger.info("\(key) was removed")
+            continue
+        }
 
-    if !SCDynamicStoreSetValue(store, sc_path as CFString, dict) {
-        throw DNSGuardError.updateFailed
+        guard let dict = d.mutableCopy() as? NSMutableDictionary else {
+            logger.warning("\(key) was modified, but it is not a dictionary as expected")
+            continue
+        }
+
+        let expected_domains = config.domains as NSArray
+        guard let current_domains = dict[kSCPropNetDNSSupplementalMatchDomains] as? NSArray else {
+            logger.warning("\(key)'s \(kSCPropNetDNSSupplementalMatchDomains) value is not an array: \(String(describing: dict[kSCPropNetDNSSupplementalMatchDomains]))")
+            continue
+        }
+
+        if current_domains == expected_domains {
+            logger.info("\(key)'s \(kSCPropNetDNSSupplementalMatchDomains) value (\(current_domains)) already matches the expected value (\(expected_domains))")
+            continue
+        }
+
+        dict[kSCPropNetDNSSupplementalMatchDomains] = expected_domains
+        if !SCDynamicStoreSetValue(store, config.sc_path as CFString, dict) {
+            logger.error("Failed to update \(key)'s \(kSCPropNetDNSSupplementalMatchDomains) value")
+        }
     }
 }
 
-
+@MainActor
 private func main() async throws -> Int32 {
-    var maybe_config: DNSGuardConfig? = nil
     do {
         let config_dir = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         let config_file = config_dir.appendingPathComponent(APP_ID).appendingPathComponent("config.json")
@@ -67,42 +88,28 @@ private func main() async throws -> Int32 {
 
     let config = maybe_config!
 
-    for try await change in NetworkInterface.changes(coalescingPeriod: 1) {
-        switch change.nature {
-            case .added, .modified:
-                if config.interfaces.contains(change.interface.name) && change.interface.address?.family == .link {
-                    let mod = switch change.nature {
-                        case .added:
-                            "came up"
-                        case .modified:
-                            "was modified"
-                        case .removed:
-                            "was shut down"
-                    }
-                    logger.info("\(change.interface.name) \(mod), resetting DNS")
-
-                    var retries = 10
-                    repeat {
-                        do {
-                            try await resetDNS(sc_path: config.sc_path, domains: config.domains)
-                            logger.info("DNS supplementalMatchDomains successfully set to \(config.domains)")
-                            break
-                        } catch {
-                            logger.warning("Failed to reset DNS", metadata: ["error": "\(error)"])
-                            retries -= 1
-                            if retries > 0 {
-                                logger.warning("Waiting two seconds before retrying \(retries) more times")
-                                try await Task.sleep(for: .seconds(2))
-                            }
-                        }
-                    } while retries > 0
-                }
-            default:
-                break
-        }
+    let store = SCDynamicStoreCreate(nil, APP_ID as CFString, handleChange, nil)
+    guard let store = store else {
+        throw DNSGuardError.storeCreationFailed
     }
 
-    return EXIT_SUCCESS
+    if !SCDynamicStoreSetNotificationKeys(store, [config.sc_path as CFString] as CFArray, nil) {
+        throw DNSGuardError.storeNotificationsFailed
+    }
+
+    if !SCDynamicStoreSetDispatchQueue(store, DispatchQueue.main) {
+        throw DNSGuardError.storeNotificationsFailed
+    }
+
+    logger.info("Monitoring \(config.sc_path) for changes...")
+
+    // Trigger an initial notification on startup to make sure the value is as expected
+    if !SCDynamicStoreNotifyValue(store, config.sc_path as CFString) {
+        throw DNSGuardError.storeNotificationsFailed
+    }
+
+    // Never returns
+    Dispatch.dispatchMain()
 }
 
 exit(try await main())

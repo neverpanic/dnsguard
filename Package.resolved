@@ -1,24 +1,6 @@
 {
-  "originHash" : "f3c06877adca3126a6deed915b05d713eb4cbf23e7f39aa7135d1d0c50f2cd4c",
+  "originHash" : "4fb96c6908e78bb4c4d2ed36d72408c551322d7c24e5d6d93ea0f375abdb0f5f",
   "pins" : [
-    {
-      "identity" : "foundationextensions",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/wadetregaskis/FoundationExtensions.git",
-      "state" : {
-        "revision" : "ac5a1d87a6808f981d41f467ed13b668b86ac5cc",
-        "version" : "3.5.2"
-      }
-    },
-    {
-      "identity" : "networkinterfaceinfo",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/wadetregaskis/NetworkInterfaceInfo.git",
-      "state" : {
-        "revision" : "3e4fc6e5dd6464864026db227c9282c46e8be541",
-        "version" : "5.1.2"
-      }
-    },
     {
       "identity" : "swift-log",
       "kind" : "remoteSourceControl",
